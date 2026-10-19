@@ -67,6 +67,32 @@ jobs:
       - name: Test
         run: python test/run_tests.py --exe build/${{ runner.os == 'Windows' && 'Debug/goose.exe' || 'goose' }} --profile baseline --cc native --require-clang
 
+  lib64:
+    # Fedora's gcc names no multiarch triplet and keeps the C library in
+    # /usr/lib64, unlike the Ubuntu runners; the in-process backend has to
+    # find it there too.
+    name: Fedora / gcc (lib64)
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    timeout-minutes: 30
+
+    steps:
+      # git first: actions/checkout then makes a real clone, and the
+      # packages-from-git test needs git.
+      - name: Install the toolchain
+        run: dnf install -y gcc gcc-c++ make cmake python3 git
+
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: cmake --build build --parallel 4
+
+      - name: Test
+        run: python3 test/run_tests.py --exe build/goose --profile baseline --cc gcc
+
   sanitize:
     name: Linux / ASan + UBSan
     runs-on: ubuntu-latest
